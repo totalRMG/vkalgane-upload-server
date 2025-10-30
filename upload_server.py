@@ -4,7 +4,6 @@ import boto3
 from botocore.client import Config
 import uuid
 import os
-import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -55,6 +54,8 @@ def upload_file():
 def get_image(s3_key):
     """Прокси для получения изображений из S3"""
     try:
+        print(f"Получаем изображение: {s3_key}")
+        
         # Получаем файл из S3
         response = s3.get_object(Bucket=BUCKET_NAME, Key=s3_key)
         image_data = response['Body'].read()
@@ -71,26 +72,7 @@ def get_image(s3_key):
         )
         
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 404
-
-@app.route('/image-url/<path:s3_key>')
-def get_image_url(s3_key):
-    """Генерирует подписанный URL для изображения"""
-    try:
-        # Генерируем подписанный URL (действителен 1 час)
-        signed_url = s3.generate_presigned_url(
-            'get_object',
-            Params={'Bucket': BUCKET_NAME, 'Key': s3_key},
-            ExpiresIn=3600
-        )
-        
-        return jsonify({
-            'success': True,
-            'url': signed_url,
-            's3_key': s3_key
-        })
-        
-    except Exception as e:
+        print(f"Ошибка получения изображения {s3_key}: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 404
 
 if __name__ == '__main__':
