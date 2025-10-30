@@ -50,20 +50,22 @@ def upload_file():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/image/<path:s3_key>')
-def get_image(s3_key):
-    """Прокси для получения изображений из S3"""
+@app.route('/file/<path:s3_key>')
+def get_file(s3_key):
+    """Прокси для получения файлов из S3"""
     try:
-        print(f"Получаем изображение: {s3_key}")
+        print(f"🔍 Получаем файл из S3: {s3_key}")
         
         # Получаем файл из S3
         response = s3.get_object(Bucket=BUCKET_NAME, Key=s3_key)
-        image_data = response['Body'].read()
+        file_data = response['Body'].read()
         content_type = response['ContentType']
         
-        # Возвращаем изображение через прокси
+        print(f"✅ Файл получен: {content_type}, {len(file_data)} байт")
+        
+        # Возвращаем файл через прокси
         return Response(
-            image_data,
+            file_data,
             content_type=content_type,
             headers={
                 'Cache-Control': 'public, max-age=3600',
@@ -72,8 +74,32 @@ def get_image(s3_key):
         )
         
     except Exception as e:
-        print(f"Ошибка получения изображения {s3_key}: {str(e)}")
+        print(f"❌ Ошибка получения файла {s3_key}: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 404
+
+@app.route('/files')
+def list_files():
+    """Список файлов в бакете (для диагностики)"""
+    try:
+        response = s3.list_objects_v2(Bucket=BUCKET_NAME)
+        files = []
+        
+        if 'Contents' in response:
+            for obj in response['Contents']:
+                files.append({
+                    'key': obj['Key'],
+                    'size': obj['Size'],
+                    'last_modified': obj['LastModified'].isoformat()
+                })
+        
+        return jsonify({
+            'success': True,
+            'files': files,
+            'count': len(files)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
